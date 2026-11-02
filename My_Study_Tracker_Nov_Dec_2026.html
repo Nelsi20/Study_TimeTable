@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Software Preparation Tracker</title>
+<style>
+:root{--bg:#f4f6fb;--card:#fff;--ink:#182238;--muted:#64718a;--line:#e5eaf2;--accent:#4f46e5;--green:#16865b;--orange:#b96b13}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Arial}
+header{background:linear-gradient(120deg,#242b64,#5550c9);color:white;padding:28px 18px}
+.wrap{max-width:1100px;margin:auto;padding:0 16px}h1{margin:0 0 6px;font-size:clamp(24px,4vw,34px)}header p{margin:0;color:#e3e5ff}
+main{padding:22px 0 50px}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px}
+.stat,.panel{background:var(--card);border:1px solid var(--line);border-radius:15px;padding:16px;box-shadow:0 4px 16px #17255408}
+.stat b{display:block;font-size:25px}.stat span,.muted{color:var(--muted);font-size:13px}
+.progress{height:10px;background:#e9eaf5;border-radius:99px;overflow:hidden;margin-top:10px}.bar{height:100%;width:0;background:linear-gradient(90deg,#4f46e5,#16a36b);transition:width .2s}
+.layout{display:grid;grid-template-columns:300px 1fr;gap:16px}.panel h2{font-size:18px;margin:0 0 12px}
+select,input,button{font:inherit}select,input[type=text]{width:100%;padding:11px;border:1px solid #d7deeb;border-radius:10px;background:white;color:var(--ink)}
+button{border:0;border-radius:10px;padding:10px 13px;background:var(--accent);color:white;font-weight:600;cursor:pointer}button.secondary{background:#eef0ff;color:#3833a3}button.danger{background:#fff0f0;color:#b42318}
+.date-list{display:grid;gap:6px;margin-top:12px;max-height:480px;overflow:auto}
+.date-btn{display:flex;justify-content:space-between;align-items:center;text-align:left;background:#f7f8fc;color:var(--ink);border:1px solid var(--line);font-size:13px;padding:9px 10px}
+.date-btn.active{border-color:var(--accent);background:#eeedff}.date-btn.exam{background:#fff7e9;color:#8b520b}
+.badge{font-size:11px;border-radius:20px;padding:3px 7px;background:#e9edf5;color:#59657a;white-space:nowrap}.badge.done{background:#e3f7ed;color:#087443}.badge.exam{background:#ffedca;color:#895000}
+.day-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}.day-head h2{font-size:22px;margin:0}.day-actions{display:flex;gap:8px;flex-wrap:wrap}
+.group{margin-top:16px}.group h3{font-size:15px;margin:0 0 8px;color:#39358d}
+.task{display:flex;gap:10px;align-items:flex-start;padding:10px 2px;border-bottom:1px solid #eef0f5}.task:last-child{border:0}
+.task input{width:18px;height:18px;margin:2px 0 0;accent-color:var(--green);flex-shrink:0}.task label{flex:1;cursor:pointer}.task.checked label{text-decoration:line-through;color:#8791a4}
+.exam-box{padding:16px;border:1px solid #f2d59d;background:#fff8e9;border-radius:12px;color:#75480b}
+.note{font-size:13px;color:var(--muted);margin-top:12px}.addrow{display:flex;gap:8px;margin-top:12px}.addrow input{flex:1}
+.small{font-size:12px;color:var(--muted)}.empty{padding:22px;text-align:center;color:var(--muted)}
+@media(max-width:760px){.layout{grid-template-columns:1fr}.date-list{grid-template-columns:repeat(2,1fr);max-height:280px}.stats{gap:8px}.stat{padding:12px}.stat b{font-size:21px}}
+</style></head>
+<body>
+<header><div class="wrap"><h1>My Software Preparation Tracker</h1><p>Choose a date, study the topics, and tick them off when you finish. Your progress is saved on this device.</p></div></header>
+<main class="wrap">
+<div class="stats">
+ <div class="stat"><b id="doneCount">0</b><span>Topics completed</span></div>
+ <div class="stat"><b id="totalCount">0</b><span>Total planned topics</span></div>
+ <div class="stat"><b id="percent">0%</b><span>Overall progress</span><div class="progress"><div class="bar" id="overallBar"></div></div></div>
+</div>
+<div class="layout">
+<aside class="panel">
+ <h2>Choose your study date</h2>
+ <select id="dateSelect" aria-label="Choose study date"></select>
+ <div class="date-list" id="dateList"></div>
+ <p class="note">Exam dates are blocked from the study plan: Nov 11, 12, 18, 21, 27 and Dec 7.</p>
+</aside>
+<section class="panel">
+ <div class="day-head"><div><div class="muted" id="daySub">YOUR DAILY PLAN</div><h2 id="dayTitle">Select a date</h2></div><div class="day-actions"><button class="secondary" id="clearDay">Uncheck this day</button></div></div>
+ <div id="dayContent"></div>
+ <div class="group">
+  <h3>➕ Add your own topic for this date</h3>
+  <div class="addrow"><input id="customTopic" type="text" placeholder="e.g. Practise Java inheritance questions"><button id="addTopic">Add</button></div>
+  <p class="small">You can add internship tasks, interview preparation or extra topics here.</p>
+ </div>
+</section></div>
+<div class="panel" style="margin-top:16px">
+ <h2>Internship skills — additional checklist</h2><p class="muted">These are extra recommendations, separate from the topics in your Software Preparation PDF.</p>
+ <div id="extraSkills"></div>
+</div>
+<p class="note">Progress is stored in this browser using local storage. If you clear browser data or switch devices, the ticks may not carry over. Use the same browser on the same device.</p>
+</main>
+<script>
+const examDates = new Set(["2026-11-11","2026-11-12","2026-11-18","2026-11-21","2026-11-27","2026-12-07"]);
+const plan = {
+"2026-11-02":[["Java — Input & Output",["BufferedReader","Command-line arguments","Output using System.out — revise printf and formatting"]],["Java — Conditional statements",["Enhanced switch"]]],
+"2026-11-03":[["Java — Arrays",["2D arrays","Multidimensional arrays","Array traversal"]]],
+"2026-11-04":[["Java — Arrays",["Searching arrays","Sorting arrays","Arrays utility class"]]],
+"2026-11-05":[["Java — Strings",["String and string creation","String methods","String comparison"]]],
+"2026-11-06":[["Java — Strings",["String immutability","StringBuilder","StringBuffer","String vs StringBuilder vs StringBuffer"]]],
+"2026-11-07":[["Java — Methods",["Parameters","Return values","Method overloading"]]],
+"2026-11-08":[["Java — Methods",["Pass-by-value","Static methods","Instance methods","Recursion","Varargs"]]],
+"2026-11-09":[["Java — OOP",["Class and object","Fields and methods","Constructors","this keyword","static keyword"]]],
+"2026-11-10":[["Revision & practice",["Revise Java topics studied so far","Write 5 Java programs independently","Review mistakes and prepare for semester exams"]]],
+"2026-11-13":[["Java — OOP",["Encapsulation","Inheritance","Method overriding","Polymorphism"]]],
+"2026-11-14":[["Java — OOP",["Abstraction","Abstract class","Interface","Composition","Association","Aggregation"]]],
+"2026-11-15":[["Java — Packages",["Access modifiers","Packages and import","Built-in packages","User-defined packages"]]],
+"2026-11-16":[["Java — Exception handling",["Errors vs exceptions","try, catch, finally","throw and throws","Checked and unchecked exceptions","Custom exceptions","Multiple catch"]]],
+"2026-11-17":[["Java — Collections",["Collection hierarchy","List","ArrayList","LinkedList","Vector"]]],
+"2026-11-19":[["Java — Collections",["Set, HashSet, LinkedHashSet, TreeSet","Map, HashMap, LinkedHashMap, TreeMap"]]],
+"2026-11-20":[["Java — Collections",["Queue, Deque, PriorityQueue","Iterator","Comparable and Comparator"]]],
+"2026-11-22":[["Java — Generics",["Generic classes","Generic methods","Generic interfaces","Wildcards"]]],
+"2026-11-23":[["Java — File handling",["File and FileReader","FileWriter","BufferedReader and BufferedWriter","InputStream and OutputStream","Serialization basics"]]],
+"2026-11-24":[["Java — Java 8+",["Lambda expressions","Functional interfaces","Method references","Stream API: filter, map, reduce, forEach","Optional","Default and static interface methods"]]],
+"2026-11-25":[["Java — Multithreading",["Process vs thread","Creating threads: Thread and Runnable","Thread lifecycle","Synchronization and race condition","Deadlock basics","Executor framework basics"]]],
+"2026-11-26":[["Java — JVM",["JVM architecture","Stack and heap","Garbage collection","Class loading","Memory management"]]],
+"2026-11-28":[["HTML — Fundamentals & text",["What is HTML and document structure","Elements, tags, attributes and comments","Headings, paragraphs, strong, em, br, hr","Lists"]]],
+"2026-11-29":[["HTML — Links, media & tables",["Hyperlinks and images","Audio, video and iframe","Tables, rows, headers and cells","Colspan and rowspan"]]],
+"2026-11-30":[["HTML — Forms",["Form and input types","Textarea, select and option","Button, checkbox and radio","Labels, validation and form attributes"]]],
+"2026-12-01":[["HTML — Semantic & important concepts",["header, nav, main, section, article, aside, footer","Block vs inline","HTML entities and HTML5","Accessibility basics and SEO basics","id vs class"]]],
+"2026-12-02":[["CSS — Fundamentals",["What is CSS","Inline, internal and external CSS","Selectors and specificity","Cascade and inheritance","Colors, background, fonts, text, borders, shadows and opacity"]]],
+"2026-12-03":[["CSS — Layout",["Box model: content, padding, border, margin, box-sizing","Display: block, inline, inline-block, none","Position: static, relative, absolute, fixed, sticky","z-index and overflow"]]],
+"2026-12-04":[["CSS — Flexbox, Grid & responsive design",["Flex container, main axis and cross axis","justify-content, align-items, flex-direction, flex-wrap, gap, flex items","Grid container, rows, columns, grid areas and gap","Media queries and mobile-first design","Responsive units: %, rem, em, vh, vw"]]],
+"2026-12-05":[["CSS — Advanced basics",["Pseudo-classes and pseudo-elements","Transitions and transform","Animation","CSS variables","Build a responsive mini page"]]],
+"2026-12-06":[["Frontend practical & revision",["Build one responsive HTML/CSS page without copying","Check mobile layout","Revise HTML and CSS checklist","Semester exam revision"]]],
+"2026-12-08":[["JavaScript — Fundamentals",["What is JavaScript? JavaScript vs Java","Variables: var, let, const","Data types","Type conversion and type coercion"]]],
+"2026-12-09":[["JavaScript — Operators & control flow",["Arithmetic, comparison and strict equality","Logical, assignment and ternary operators","Nullish coalescing and optional chaining","if, else, switch, loops, break and continue"]]],
+"2026-12-10":[["JavaScript — Functions",["Function declaration and expression","Arrow functions","Parameters, return, default and rest parameters","Scope and closures"]]],
+"2026-12-11":[["JavaScript — Arrays",["Create and access arrays","push, pop, shift, unshift","slice and splice","map, filter, reduce, find","some, every and sort"]]],
+"2026-12-12":[["JavaScript — Objects & strings",["Object creation, properties and methods","Destructuring and spread operator","Object methods","String methods, template literals, searching, splitting and replacing"]]],
+"2026-12-13":[["JavaScript — DOM",["DOM and selecting elements","Changing HTML and CSS","Events and event listeners","Forms and validation"]]],
+"2026-12-14":[["JavaScript — Asynchronous programming",["Synchronous vs asynchronous","Callbacks and promises","async/await","fetch, JSON and API calls"]]],
+"2026-12-15":[["JavaScript — Advanced fundamentals",["Execution context and call stack","Hoisting and scope","Closures","Event loop","Event bubbling and event delegation","Local storage and session storage"]]],
+"2026-12-16":[["SQL — Basics & DDL",["Database, DBMS, RDBMS and SQL","Tables, rows, columns and data types","CREATE, ALTER, DROP and TRUNCATE"]]],
+"2026-12-17":[["SQL — DML, DQL & filtering",["INSERT, UPDATE and DELETE","SELECT and WHERE","Comparison and logical operators","IN, BETWEEN, LIKE and IS NULL","ORDER BY, ASC and DESC"]]],
+"2026-12-18":[["SQL — Functions, grouping & constraints",["COUNT, SUM, AVG, MIN and MAX","GROUP BY and HAVING","Primary key, foreign key, unique, not null, check and default"]]],
+"2026-12-19":[["SQL — Joins",["INNER JOIN","LEFT JOIN","RIGHT JOIN","FULL OUTER JOIN","SELF JOIN","CROSS JOIN — practise queries"]]],
+"2026-12-20":[["SQL — Advanced",["Subqueries, correlated and nested queries","CASE, views and indexes","CTE and window functions","Stored procedures, functions and triggers","COMMIT, ROLLBACK and SAVEPOINT","NULL, relationships, referential integrity and query optimization basics"]]],
+"2026-12-21":[["DSA — Arrays",["Traversal, insertion and deletion","Searching and sorting","Prefix sum","Two pointers","Sliding window","Kadane's algorithm"]]],
+"2026-12-22":[["DSA — Strings",["Character counting and frequency","Palindrome and anagram","String reversal and substrings","Two pointers and sliding window"]]],
+"2026-12-23":[["DSA — Searching & sorting",["Linear search and binary search","Binary search variations","Bubble, selection and insertion sort"]]],
+"2026-12-24":[["DSA — Sorting & linked lists",["Merge sort and quick sort","Counting sort basics","Node, head and traversal","Singly, doubly and circular linked lists","Insertion, deletion, reverse linked list","Detect cycle and find middle node"]]],
+"2026-12-25":[["DSA — Stack, queue, hashing & recursion",["Stack: push, pop, peek and applications","Parentheses; infix, prefix and postfix","Queue: enqueue, dequeue, circular queue, deque, priority queue","Hash table, HashMap and HashSet","Frequency counting, Two Sum and duplicate detection","Recursion: base case, recursive case, factorial, Fibonacci, array and string recursion"]]],
+"2026-12-26":[["DSA — Trees & heap",["Binary tree and binary search tree","Inorder, preorder, postorder and level-order traversal","Height, depth, search, insert and delete","Min heap, max heap, priority queue and heap sort basics"]]],
+"2026-12-27":[["DSA — Graphs, DP & greedy",["Vertices, edges, directed and undirected graphs","BFS and DFS","Adjacency matrix and adjacency list","Shortest path basics","Memoization, tabulation and basic DP problems","Greedy concept, activity selection and basic greedy problems"]]],
+"2026-12-28":[["DBMS — Fundamentals & data models",["What is DBMS? DBMS vs RDBMS; file system vs DBMS","Database architecture and database users","Hierarchical, network, relational and object-oriented models","Relation, tuple, attribute and domain","Super, candidate, primary, alternate, foreign and composite keys","Entity, attribute, relationship, cardinality and ER diagrams","1:1, 1:many and many:many relationships"]]],
+"2026-12-29":[["DBMS — Advanced",["Functional dependency and 1NF, 2NF, 3NF, BCNF","Denormalization","Transactions, ACID, transaction states, commit, rollback and savepoint","Concurrency, serializability, shared/exclusive locks, deadlock and isolation levels","Clustered/non-clustered indexes, B-tree and hash indexing","Tables, views, procedures, functions and triggers","Referential integrity, constraints, backup/recovery, security, query optimization and distributed databases basics"]]],
+"2026-12-30":[["Operating Systems",["OS functions, types, kernel and system calls","Processes, states, PCB, creation, termination and context switching","Threads, process vs thread, multithreading, user-level and kernel-level threads","FCFS, SJF, SRTF, Round Robin, priority scheduling and criteria","Race condition, critical section, mutex, semaphore, monitor, producer-consumer and reader-writer","Deadlock conditions, prevention, avoidance, detection, recovery and Banker's algorithm basics","RAM, virtual memory, paging, segmentation, page fault, FIFO, LRU and optimal replacement","File systems, file allocation, disk scheduling, cache, buffer, fragmentation, thrashing, boot and security basics"]]],
+"2026-12-31":[["Computer Networks",["Network basics: LAN, MAN, WAN, PAN and topology","OSI 7 layers and their functions","TCP/IP model","Hub, switch, router, bridge, gateway, repeater and modem","MAC, IPv4, IPv6, public/private IP addressing","TCP, UDP, DNS, DHCP, HTTP, HTTPS, routing, subnetting, ARP, ICMP, NAT, firewall, SSL/TLS and VPN"]]]
+};
+const extras = [
+["Git & GitHub",["git init, status, add, commit, push, pull, clone","Branches, merge, resolving conflicts","Create a clean GitHub repository and README"]],
+["REST API & Postman",["HTTP methods: GET, POST, PUT, PATCH, DELETE","Status codes, headers, query/path parameters and JSON","Send requests and test APIs in Postman"]],
+["React.js",["Components, JSX and props","State, events and Hooks: useState, useEffect","Forms, conditional rendering and API integration"]],
+["Java + Database",["JDBC connection","CRUD operations with MySQL","PreparedStatement and basic SQL integration"]],
+["Developer tools",["VS Code productivity","Chrome DevTools: Elements, Console and Network","Linux terminal basics and command line"]],
+["Internship assessments",["Aptitude: percentages, ratio, time & work, averages","Logical reasoning and verbal ability","Practise timed coding questions"]],
+["Interview readiness",["60-second self-introduction","Explain SmartFees and Zoho Customer360 projects","Java, SQL, OOP and frontend interview questions","Explain one project architecture and challenges"]],
+["Portfolio & projects",["Build and deploy a responsive portfolio","Build a JavaScript app using a public API","Document projects with screenshots and README"]]
+];
+const KEY="softwarePrepTracker_v1";
+let saved=JSON.parse(localStorage.getItem(KEY)||'{"checked":{},"custom":{},"extra":{}}');
+const allDates=[];for(let d=new Date("2026-11-02T12:00:00");d<=new Date("2026-12-31T12:00:00");d.setDate(d.getDate()+1)){allDates.push(d.toISOString().slice(0,10))}
+const fmt=s=>new Date(s+"T12:00:00").toLocaleDateString("en-IN",{weekday:"short",day:"numeric",month:"short",year:"numeric"});
+const dateSelect=document.getElementById("dateSelect"),dateList=document.getElementById("dateList");
+allDates.forEach(d=>{let o=document.createElement("option");o.value=d;o.textContent=fmt(d)+(examDates.has(d)?" — EXAM":"");dateSelect.append(o)});
+function itemsFor(d){return (plan[d]||[]).flatMap(g=>g[1].map(t=>({id:d+"::"+t,title:t,group:g[0]}))).concat((saved.custom[d]||[]).map((t,i)=>({id:d+"::custom"+i,title:t,group:"My added topics"})))}
+function counts(d){let a=itemsFor(d);return [a.filter(x=>saved.checked[x.id]).length,a.length]}
+function save(){localStorage.setItem(KEY,JSON.stringify(saved));renderStats();renderDates()}
+function renderStats(){let all=allDates.flatMap(itemsFor);let done=all.filter(x=>saved.checked[x.id]).length;let total=all.length;let pct=total?Math.round(done/total*100):0;document.getElementById("doneCount").textContent=done;document.getElementById("totalCount").textContent=total;document.getElementById("percent").textContent=pct+"%";document.getElementById("overallBar").style.width=pct+"%"}
+function renderDates(){dateList.innerHTML="";allDates.forEach(d=>{let [n,t]=counts(d),b=document.createElement("button");b.className="date-btn"+(dateSelect.value===d?" active":"")+(examDates.has(d)?" exam":"");b.innerHTML=`<span>${fmt(d).replace(", 2026","")}</span><span class="badge ${examDates.has(d)?"exam":(t&&n===t?"done":"")}">${examDates.has(d)?"EXAM":`${n}/${t}`}</span>`;b.onclick=()=>{dateSelect.value=d;renderDay();renderDates()};dateList.append(b)})}
+function renderDay(){let d=dateSelect.value;document.getElementById("dayTitle").textContent=fmt(d);let c=document.getElementById("dayContent");c.innerHTML="";document.getElementById("daySub").textContent=examDates.has(d)?"SEMESTER EXAM — NO STUDY TARGET":"YOUR DAILY PLAN";if(examDates.has(d)){c.innerHTML='<div class="exam-box">Semester examination day. Focus on your exam; no software study tasks are scheduled.</div>';return}
+let groups={};itemsFor(d).forEach(x=>(groups[x.group]??=[]).push(x));if(!Object.keys(groups).length){c.innerHTML='<div class="empty">No preset topics for this date. Add your own task below, or use this as a revision / catch-up day.</div>'}
+Object.entries(groups).forEach(([g,arr])=>{let sec=document.createElement("div");sec.className="group";let h=document.createElement("h3");h.textContent=g;sec.append(h);arr.forEach(x=>{let row=document.createElement("div");row.className="task"+(saved.checked[x.id]?" checked":"");let cb=document.createElement("input");cb.type="checkbox";cb.checked=!!saved.checked[x.id];cb.id="t"+Math.random().toString(36).slice(2);let lab=document.createElement("label");lab.htmlFor=cb.id;lab.textContent=x.title;cb.onchange=()=>{saved.checked[x.id]=cb.checked;save();renderDay()};row.append(cb,lab);sec.append(row)});c.append(sec)})}
+document.getElementById("addTopic").onclick=()=>{let v=document.getElementById("customTopic").value.trim(),d=dateSelect.value;if(!v)return;(saved.custom[d]??=[]).push(v);document.getElementById("customTopic").value="";save();renderDay()};
+document.getElementById("clearDay").onclick=()=>{itemsFor(dateSelect.value).forEach(x=>delete saved.checked[x.id]);save();renderDay()};
+dateSelect.onchange=()=>{renderDay();renderDates()};
+function renderExtras(){let box=document.getElementById("extraSkills");extras.forEach(([g,arr],i)=>{let sec=document.createElement("div");sec.className="group";let h=document.createElement("h3");h.textContent=g;sec.append(h);arr.forEach((t,j)=>{let id="extra-"+i+"-"+j,row=document.createElement("div");row.className="task"+(saved.extra[id]?" checked":"");let cb=document.createElement("input");cb.type="checkbox";cb.checked=!!saved.extra[id];cb.id=id;let l=document.createElement("label");l.htmlFor=id;l.textContent=t;cb.onchange=()=>{saved.extra[id]=cb.checked;row.classList.toggle("checked",cb.checked);localStorage.setItem(KEY,JSON.stringify(saved))};row.append(cb,l);sec.append(row)});box.append(sec)})}
+dateSelect.value="2026-11-02";renderExtras();renderDay();renderStats();renderDates();
+</script></body></html>
